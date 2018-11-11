@@ -33,17 +33,17 @@ func main() {
 	p3 := NewProposer(acceptorsList, 3)
 
 	go func() {
-		result := p1.receive(write)
+		result, _ := p1.receive(write)
 		fmt.Println(result)
 	}()
 
 	go func() {
-		result := p2.receive(read)
+		result, _ := p2.receive(read)
 		fmt.Println(result)
 	}()
 
 	go func() {
-		result := p3.receive(cas)
+		result, _ := p3.receive(cas)
 		fmt.Println(result)
 	}()
 

@@ -2,3 +2,5 @@
 
 This is Go implementation of CASPaxos register.   
 However its **incomplete for now**.
+
+We should flash on disk some values
