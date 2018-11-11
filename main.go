@@ -13,11 +13,11 @@ func main() {
 	a5 := NewAcceptor()
 
 	write := func(x int) int {
-		return 1
+		return 2
 	}
 
 	read := func(x int) int {
-		return 2
+		return x
 	}
 
 	cas := func(x int) int {
@@ -28,9 +28,9 @@ func main() {
 	}
 
 	acceptorsList := []Acceptor{a1, a2, a3, a4, a5}
-	p1 := NewProposer(acceptorsList)
-	p2 := NewProposer(acceptorsList)
-	p3 := NewProposer(acceptorsList)
+	p1 := NewProposer(acceptorsList,1)
+	p2 := NewProposer(acceptorsList, 2)
+	p3 := NewProposer(acceptorsList, 3)
 
 	go func() {
 		result := p1.receive(write)

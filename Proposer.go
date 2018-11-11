@@ -13,30 +13,32 @@ func random(min, max int) int {
 
 type Proposer struct {
 	Acceptors []Acceptor
-	Quorum    int
-	State     int
+	Quorum  int
+	State   int
+	BallotNumber 	Ballot
 }
 
-func NewProposer(acceptors []Acceptor) *Proposer {
+func NewProposer(acceptors []Acceptor, id int) *Proposer {
 	proposer := new(Proposer)
 	proposer.Acceptors  = acceptors
 	proposer.Quorum = (len(acceptors) - 1) / 2
 	proposer.State = 0
+	proposer.BallotNumber = Ballot {1, id}
 	return proposer
 }
 
 func (proposer *Proposer) receive(f func(x int) int) int {
-	ballotNumber := proposer.generateBallotNumber()
-	proposer.sendPrepare(ballotNumber)
-	return proposer.sendAccept(f, ballotNumber)
+	proposer.BallotNumber = proposer.generateBallotNumber()
+	proposer.sendPrepare(proposer.BallotNumber)
+	return proposer.sendAccept(f, proposer.BallotNumber)
 }
 
-func (proposer *Proposer) generateBallotNumber() int {
-	return random(1, 100) // TODO: BallotNumber должен же быть не меньше предыдущего
+func (proposer *Proposer) generateBallotNumber() Ballot {
+	return Ballot {proposer.BallotNumber.Number + random(1, 100), proposer.BallotNumber.Id}
 }
 
 
-func (proposer *Proposer) sendPrepare(ballotNumber int) {
+func (proposer *Proposer) sendPrepare(ballotNumber Ballot) {
 	conformations :=  make([]Pair, 0, 0)
 
 	// TODO: надо делать в разных поток отправку prepare и проверку
@@ -72,11 +74,15 @@ func (proposer *Proposer) sendPrepare(ballotNumber int) {
 
 
 func getHighestConfirmation(conformations []Pair) Pair {
-	ballots := make([]int, 1, 1)
+	ballots := make([]Ballot, 1, 1)
 	for _, conformation := range conformations {
 		ballots = append(ballots, conformation.BallotNumber)
 	}
-	sort.Ints(ballots)
+
+	sort.Slice(ballots, func(i, j int) bool {
+		return ballots[j].MoreThan(ballots[i])
+	})
+
 	highestBallot := ballots[len(ballots) - 1]
 
 	for _, conformation := range conformations {
@@ -87,7 +93,7 @@ func getHighestConfirmation(conformations []Pair) Pair {
 	return conformations[0]
 }
 
-func (proposer *Proposer) sendAccept(f func(x int) int, ballotNumber int) int {
+func (proposer *Proposer) sendAccept(f func(x int) int, ballotNumber Ballot) int {
 	proposer.State = f(proposer.State)
 	acceptations := make([]Pair, 0, 0)
 	for id, acceptor := range proposer.Acceptors {
