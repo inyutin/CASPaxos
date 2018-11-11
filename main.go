@@ -12,8 +12,19 @@ func main() {
 	a4 := NewAcceptor()
 	a5 := NewAcceptor()
 
-	change := func(x int) int{
-		return x + 4
+	write := func(x int) int {
+		return 1
+	}
+
+	read := func(x int) int {
+		return 2
+	}
+
+	cas := func(x int) int {
+		if x == 2 {
+			return 3
+		}
+		return x
 	}
 
 	acceptorsList := []Acceptor{a1, a2, a3, a4, a5}
@@ -22,17 +33,17 @@ func main() {
 	p3 := NewProposer(acceptorsList)
 
 	go func() {
-		result := p1.receive(change)
+		result := p1.receive(write)
 		fmt.Println(result)
 	}()
 
 	go func() {
-		result := p2.receive(change)
+		result := p2.receive(read)
 		fmt.Println(result)
 	}()
 
 	go func() {
-		result := p3.receive(change)
+		result := p3.receive(cas)
 		fmt.Println(result)
 	}()
 
