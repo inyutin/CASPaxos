@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/Workiva/go-datastructures/set"
 	"time"
 )
 
@@ -16,35 +17,30 @@ func main() {
 		return 2
 	}
 
-	read := func(x int) int {
-		return x
+	inc := func(x int) int {
+		return x+1
 	}
 
-	cas := func(x int) int {
-		if x == 2 {
-			return 3
-		}
-		return x
-	}
-
-	acceptorsList := []Acceptor{a1, a2, a3, a4, a5}
+	acceptorsList := set.Set{}
+	acceptorsList.Add(a1, a2, a3, a4, a5)
 	p1 := NewProposer(acceptorsList,1)
 	p2 := NewProposer(acceptorsList, 2)
 	p3 := NewProposer(acceptorsList, 3)
 
+	fmt.Println("Init state: 0")
 	go func() {
-		result, _ := p1.receive(write)
-		fmt.Println(result)
+		result, state := p1.receive(write)
+		fmt.Printf("Id: %d, Result: %d, State: %t\n", p1.Id, result, state)
 	}()
 
 	go func() {
-		result, _ := p2.receive(read)
-		fmt.Println(result)
+		result, state := p2.receive(inc)
+		fmt.Printf("Id: %d, Result: %d, State: %t\n", p2.Id, result, state)
 	}()
 
 	go func() {
-		result, _ := p3.receive(cas)
-		fmt.Println(result)
+		result, state := p3.receive(inc)
+		fmt.Printf("Id: %d, Result: %d, State: %t\n", p3.Id, result, state)
 	}()
 
 	time.Sleep(60 * time.Second)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/Workiva/go-datastructures/set"
 	"math/rand"
 	"sort"
 	"time"
@@ -12,18 +13,20 @@ func random(min, max int) int {
 }
 
 type Proposer struct {
-	Acceptors []Acceptor
+	Acceptors *set.Set
 	Quorum  int
 	State   int
 	BallotNumber 	Ballot
+	Id int
 }
 
-func NewProposer(acceptors []Acceptor, id int) *Proposer {
+func NewProposer(acceptors *set.Set, id int) *Proposer {
 	proposer := new(Proposer)
 	proposer.Acceptors  = acceptors
-	proposer.Quorum = (len(acceptors) - 1) / 2
+	proposer.Quorum = (int(acceptors.Len()) - 1) / 2
 	proposer.State = 0
 	proposer.BallotNumber = Ballot {1, id}
+	proposer.Id = id
 	return proposer
 }
 
@@ -43,18 +46,14 @@ func (proposer *Proposer) generateBallotNumber() Ballot {
 
 func (proposer *Proposer) sendPrepare(ballotNumber Ballot) bool{
 	conformations :=  make([]Pair, 0, 0)
-	rejects :=  make([]Pair, 0, 0)
 
 	// TODO: надо делать в разных поток отправку prepare и проверку
-	for _, acceptor := range proposer.Acceptors {
-		go func(_acceptor Acceptor) {
-			conformation := _acceptor.prepare(ballotNumber)
-			if conformation.State != -1 {
-				conformations = append(conformations, conformation)
-			} else {
-				rejects = append(conformations, conformation)
-			}
-		}(acceptor)
+	for _, acceptor := range proposer.Acceptors.Flatten() {
+		(Acceptor*) acceptor
+		conformation := acceptor.prepare(ballotNumber)
+		if conformation.State != -1 {
+			conformations = append(conformations, conformation)
+		}
 	}
 
 	for true {
@@ -105,28 +104,18 @@ func getHighestConfirmation(conformations []Pair) Pair {
 func (proposer *Proposer) sendAccept(f func(x int) int, ballotNumber Ballot) (int, bool) {
 	proposer.State = f(proposer.State)
 	acceptations := make([]Pair, 0, 0)
-	rejects :=  make([]Pair, 0, 0)
 	for id, acceptor := range proposer.Acceptors {
-		go func(_proposer *Proposer, _id int, _acceptor Acceptor) {
-			acceptation := _acceptor.accept(ballotNumber, _proposer.State)
-			_proposer.Acceptors[_id] = _acceptor
-			if acceptation.State != -1 {
-				acceptations = append(acceptations, acceptation)
-			} else {
-				rejects = append(acceptations, acceptation)
-			}
-		}(proposer, id, acceptor)
+		acceptation := acceptor.accept(ballotNumber, proposer.State)
+		proposer.Acceptors[id] = acceptor
+		if acceptation.State != -1 {
+			acceptations = append(acceptations, acceptation)
+		}
 	}
 
-	// TODO: Надо распарралелить
-	for true {
-		if len(acceptations) >= proposer.Quorum+ 1 {
-			break
-		}
-		if len(rejects) >= proposer.Quorum+ 1 {
-			return proposer.State, false
-		}
-		time.Sleep(5)
+	if len(acceptations) >= proposer.Quorum+ 1 {
+		return proposer.State, true
 	}
-	return proposer.State, true
+	time.Sleep(5)
+
+	return proposer.State, false
 }
